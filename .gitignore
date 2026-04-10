@@ -1,0 +1,31 @@
+.DS_Store
+
+# Python environments and caches
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.python-version
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Pipenv and local environment files
+.env
+.env.*
+
+# Project-specific Python artifacts
+.jython_cache/
+map/backup/
+
+# Node / Vue build artifacts
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo

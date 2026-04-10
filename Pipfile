@@ -9,8 +9,9 @@ numpy = "*"
 matplotlib = "*"
 scikit-learn = "*"
 umap-learn = "*"
+pyshp = "*"
 
 [dev-packages]
 
 [requires]
-python_version = "3.11"
+python_version = "3.14"
