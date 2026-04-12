@@ -379,6 +379,7 @@ let scrollRecordTimer = null;
 let clearHighlightTimer = null;
 
 const canvasRenderer = L.canvas({ padding: 0.35 });
+const publicBase = import.meta.env.BASE_URL || "/";
 const t = computed(() => TRANSLATIONS[language.value]);
 const ORDER_LEGEND = computed(() => [
   { value: "1", label: t.value.orderLegendLabel("1"), color: ORDER_COLORS["1"] },
@@ -481,6 +482,10 @@ const visibleRecords = computed(() =>
     return rows.slice(start, end);
   })(),
 );
+
+function assetUrl(path) {
+  return new URL(path, `${window.location.origin}${publicBase}`).toString();
+}
 
 const summary = computed(() => {
   const authors = new Set();
@@ -1222,7 +1227,7 @@ async function syncOverlayVisibility() {
 
   if (showAdminBoundaries.value) {
     if (!adminGeoJsonPromise) {
-      adminGeoJsonPromise = fetch("/ne_10m_admin_1_states_provinces.geojson").then((res) =>
+      adminGeoJsonPromise = fetch(assetUrl("ne_10m_admin_1_states_provinces.geojson")).then((res) =>
         res.json(),
       );
     }
@@ -1236,7 +1241,7 @@ async function syncOverlayVisibility() {
 
   if (showPopulatedPlaces.value) {
     if (!placesGeoJsonPromise) {
-      placesGeoJsonPromise = fetch("/ne_110m_populated_places.geojson").then((res) =>
+      placesGeoJsonPromise = fetch(assetUrl("ne_110m_populated_places.geojson")).then((res) =>
         res.json(),
       );
     }
@@ -1268,8 +1273,8 @@ onMounted(async () => {
   labelLayer = L.layerGroup().addTo(map);
 
   const [records, meta] = await Promise.all([
-    loadCsv("/author_map_points.csv"),
-    fetch("/author_map_meta.json").then((res) => res.json()),
+    loadCsv(assetUrl("author_map_points.csv")),
+    fetch(assetUrl("author_map_meta.json")).then((res) => res.json()),
   ]);
 
   allRecords.value = records;
