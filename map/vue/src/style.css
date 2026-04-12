@@ -175,6 +175,7 @@ body {
   align-items: baseline;
   gap: 8px;
   min-height: 28px;
+  flex-wrap: wrap;
 }
 
 .timeline-heading-inline .eyebrow {
@@ -324,20 +325,6 @@ body {
   top: 16px;
 }
 
-.floating-export-btn {
-  top: 16px;
-  right: 16px;
-  padding: 8px 14px;
-  font-size: 12px;
-  font-weight: 700;
-  z-index: 650;
-}
-
-.floating-export-btn:disabled {
-  cursor: wait;
-  opacity: 0.7;
-}
-
 .timeline-track {
   position: relative;
   height: 120px;
@@ -351,13 +338,14 @@ body {
   overflow: hidden;
 }
 
-.timeline-legend {
+.timeline-order-legend {
   display: inline-flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
-.timeline-legend-item {
+.timeline-order-legend-item {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -365,18 +353,45 @@ body {
   color: #33415c;
 }
 
-.timeline-legend-swatch {
+.timeline-order-legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  box-shadow: 0 0 0 1px rgba(20, 33, 61, 0.08);
+}
+
+.timeline-series-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.timeline-series-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #33415c;
+}
+
+.timeline-series-legend-swatch {
   width: 12px;
   height: 12px;
   border-radius: 4px;
 }
 
-.timeline-legend-swatch-authors {
+.timeline-series-legend-swatch-authors {
   background: rgba(0, 121, 140, 0.78);
 }
 
-.timeline-legend-swatch-papers {
+.timeline-series-legend-swatch-papers {
   background: rgba(252, 163, 17, 0.82);
+}
+
+.timeline-export-btn:disabled {
+  cursor: wait;
+  opacity: 0.7;
 }
 
 .timeline-axis-label {
@@ -667,7 +682,12 @@ body {
     display: none;
   }
 
-  .timeline-legend {
+  .timeline-order-legend {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .timeline-series-legend {
     width: 100%;
     justify-content: flex-start;
   }
@@ -691,10 +711,6 @@ body {
   .floating-toggle-left {
     top: 12px;
     left: 12px;
-  }
-
-  .floating-export-btn {
-    top: 12px;
   }
 
   .floating-toggle-bottom {

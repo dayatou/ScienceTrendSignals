@@ -140,42 +140,46 @@
       </div>
     </section>
 
-    <button
-      class="floating-toggle floating-export-btn"
-      type="button"
-      :disabled="isExporting || !mapRef"
-      @click="exportCurrentViewSvg"
-    >
-      {{ isExporting ? t.exportingSvg : t.exportSvg }}
-    </button>
-
     <section
       ref="timelineRef"
       class="timeline-overlay"
-      @pointerdown="onTimelinePointerDown"
-      @pointermove="onTimelinePointerMove"
-      @pointerup="onTimelinePointerUp"
-      @pointerleave="onTimelinePointerUp"
-      @dblclick="clearRanges"
     >
       <div class="timeline-head">
         <div class="timeline-heading-inline">
           <span class="eyebrow">{{ t.timelineEyebrow }}</span>
           <h2>{{ t.timelineTitle }}</h2>
+          <div class="timeline-order-legend">
+            <span
+              v-for="item in ORDER_LEGEND"
+              :key="`timeline-order-${item.value}`"
+              class="timeline-order-legend-item"
+            >
+              <span class="timeline-order-legend-swatch" :style="{ background: item.color }"></span>
+              {{ item.label }}
+            </span>
+          </div>
         </div>
         <div class="timeline-actions">
-          <div class="timeline-legend">
-            <span class="timeline-legend-item">
-              <span class="timeline-legend-swatch timeline-legend-swatch-papers"></span>
+          <div class="timeline-series-legend">
+            <span class="timeline-series-legend-item">
+              <span class="timeline-series-legend-swatch timeline-series-legend-swatch-papers"></span>
               {{ t.papersLabel }}
             </span>
-            <span class="timeline-legend-item">
-              <span class="timeline-legend-swatch timeline-legend-swatch-authors"></span>
+            <span class="timeline-series-legend-item">
+              <span class="timeline-series-legend-swatch timeline-series-legend-swatch-authors"></span>
               {{ t.authorsLabel }}
             </span>
           </div>
           <span class="timeline-tip">{{ t.timelineTip }}</span>
           <button class="ghost-btn" type="button" @click.stop="clearRanges">{{ t.clearSelection }}</button>
+          <button
+            class="ghost-btn timeline-export-btn"
+            type="button"
+            :disabled="isExporting || !mapRef"
+            @click="exportCurrentViewSvg"
+          >
+            {{ isExporting ? t.exportingSvg : t.exportSvg }}
+          </button>
         </div>
       </div>
 
@@ -188,7 +192,15 @@
           <span>{{ t.papersAxis }}</span>
           <strong>{{ timelineMaxPapers }}</strong>
         </div>
-        <div ref="timelinePlotRef" class="timeline-plot">
+        <div
+          ref="timelinePlotRef"
+          class="timeline-plot"
+          @pointerdown="onTimelinePointerDown"
+          @pointermove="onTimelinePointerMove"
+          @pointerup="onTimelinePointerUp"
+          @pointerleave="onTimelinePointerUp"
+          @dblclick="clearRanges"
+        >
           <div class="timeline-bars" aria-hidden="true">
             <div
               v-for="stat in timelineYearStats"
@@ -630,27 +642,48 @@ function buildPanelSvg(x, y, width, title, lines, footer = []) {
 function buildTimelineSvg(viewportWidth, viewportHeight) {
   const marginX = viewportWidth <= 640 ? 12 : 26;
   const bottom = viewportWidth <= 640 ? 12 : 14;
-  const panelHeight = viewportWidth <= 640 ? 110 : 120;
+  const chartHeight = viewportWidth <= 640 ? 78 : 92;
+  const panelHeight = chartHeight + 16;
   const width = viewportWidth - marginX * 2;
-  const height = viewportWidth <= 640 ? 138 : 148;
+  const height = viewportWidth <= 640 ? 146 : 166;
   const x = marginX;
   const y = viewportHeight - bottom - height;
   const plotX = x + 16;
-  const plotY = y + 30;
+  const headerRowY = y + 22;
+  const plotY = y + 40;
   const plotWidth = width - 32;
-  const plotHeight = panelHeight - 16;
+  const plotHeight = chartHeight;
   const barAreaHeight = plotHeight - 22;
 
-  const barsSvg = timelineYearStats.value
-    .map((stat) => {
-      const centerX = plotX + (yearCenterPercent(stat.year) / 100) * plotWidth;
-      const authorHeight = (barHeight(stat.authorCount, timelineMaxAuthors.value) / 100) * barAreaHeight;
-      const paperHeight = (barHeight(stat.paperCount, timelineMaxPapers.value) / 100) * barAreaHeight;
-      const baseY = plotY + barAreaHeight;
-      return `
-        <rect x="${(centerX - 4).toFixed(2)}" y="${(baseY - authorHeight).toFixed(2)}" width="3" height="${authorHeight.toFixed(2)}" rx="2" fill="rgba(0,121,140,0.78)" />
-        <rect x="${(centerX + 1).toFixed(2)}" y="${(baseY - paperHeight).toFixed(2)}" width="3" height="${paperHeight.toFixed(2)}" rx="2" fill="rgba(252,163,17,0.86)" />
-      `;
+  const chartPoints = timelineYearStats.value.map((stat) => {
+    const centerX = plotX + (yearCenterPercent(stat.year) / 100) * plotWidth;
+    const authorY = plotY + barAreaHeight - (barHeight(stat.authorCount, timelineMaxAuthors.value) / 100) * barAreaHeight;
+    const paperY = plotY + barAreaHeight - (barHeight(stat.paperCount, timelineMaxPapers.value) / 100) * barAreaHeight;
+    return {
+      year: stat.year,
+      x: centerX,
+      authorY,
+      paperY,
+    };
+  });
+
+  const authorLine = chartPoints
+    .map((point, index) => `${index ? "L" : "M"}${point.x.toFixed(2)} ${point.authorY.toFixed(2)}`)
+    .join(" ");
+  const paperLine = chartPoints
+    .map((point, index) => `${index ? "L" : "M"}${point.x.toFixed(2)} ${point.paperY.toFixed(2)}`)
+    .join(" ");
+  const areaBaseY = (plotY + barAreaHeight).toFixed(2);
+  const authorArea = chartPoints.length
+    ? `${authorLine} L${chartPoints.at(-1).x.toFixed(2)} ${areaBaseY} L${chartPoints[0].x.toFixed(2)} ${areaBaseY} Z`
+    : "";
+  const paperArea = chartPoints.length
+    ? `${paperLine} L${chartPoints.at(-1).x.toFixed(2)} ${areaBaseY} L${chartPoints[0].x.toFixed(2)} ${areaBaseY} Z`
+    : "";
+  const gridSvg = [0.25, 0.5, 0.75]
+    .map((fraction) => {
+      const y = plotY + barAreaHeight - barAreaHeight * fraction;
+      return `<line x1="${plotX.toFixed(2)}" y1="${y.toFixed(2)}" x2="${(plotX + plotWidth).toFixed(2)}" y2="${y.toFixed(2)}" stroke="rgba(20,33,61,0.08)" stroke-dasharray="4 6" />`;
     })
     .join("");
 
@@ -668,20 +701,44 @@ function buildTimelineSvg(viewportWidth, viewportHeight) {
       const tickX = plotX + (yearCenterPercent(tick.year) / 100) * plotWidth;
       return `
         <line x1="${tickX.toFixed(2)}" y1="${(plotY + plotHeight - 14).toFixed(2)}" x2="${tickX.toFixed(2)}" y2="${(plotY + plotHeight).toFixed(2)}" stroke="rgba(20,33,61,0.3)" />
-        <text x="${tickX.toFixed(2)}" y="${(plotY + plotHeight + 14).toFixed(2)}" text-anchor="middle" font-size="10" fill="#33415c">${tick.year}</text>
+        <text x="${tickX.toFixed(2)}" y="${(plotY + plotHeight + 12).toFixed(2)}" text-anchor="middle" font-size="10" fill="#33415c">${tick.year}</text>
       `;
     })
     .join("");
+  const eyebrowWidth = viewportWidth <= 640 ? 72 : 88;
+  const titleX = x + eyebrowWidth + 28;
+  const orderLegendStartX = titleX + 280;
+  const orderLegendSpacing = viewportWidth <= 640 ? 60 : 74;
+  const orderLegendSvg = ORDER_LEGEND.value
+    .map((item, index) => `
+      <g transform="translate(${(orderLegendStartX + index * orderLegendSpacing).toFixed(2)} ${headerRowY.toFixed(2)})">
+        <circle cx="5" cy="-3" r="4.5" fill="${item.color}" />
+        <text x="15" y="1" font-size="11" fill="#5c677d">${escapeXml(item.label)}</text>
+      </g>
+    `)
+    .join("");
+  const seriesLegendX = x + width - (viewportWidth <= 640 ? 250 : 382);
 
   return `
     <g>
       <rect x="${x}" y="${y}" width="${width}" height="${height}" rx="26" fill="rgba(248,244,236,0.86)" stroke="rgba(20,33,61,0.12)" />
-      <text x="${x + 16}" y="${y + 20}" font-size="10" letter-spacing="1.2" fill="#5c677d">${escapeXml(t.value.timelineEyebrow.toUpperCase())}</text>
-      <text x="${x + 16}" y="${y + 38}" font-size="15" font-weight="700" fill="#14213d">${escapeXml(t.value.timelineTitle)}</text>
-      <text x="${x + width - 16}" y="${y + 20}" text-anchor="end" font-size="11" fill="#5c677d">${escapeXml(t.value.timelineTip)}</text>
+      <text x="${x + 16}" y="${headerRowY}" font-size="10" letter-spacing="1.2" fill="#5c677d">${escapeXml(t.value.timelineEyebrow.toUpperCase())}</text>
+      <text x="${titleX}" y="${headerRowY}" font-size="15" font-weight="700" fill="#14213d">${escapeXml(t.value.timelineTitle)}</text>
+      ${orderLegendSvg}
+      <g transform="translate(${seriesLegendX.toFixed(2)} ${headerRowY.toFixed(2)})">
+        <circle cx="6" cy="-3" r="4" fill="rgba(237,174,73,0.92)" />
+        <text x="16" y="1" font-size="11" fill="#5c677d">${escapeXml(t.value.papersLabel)}</text>
+        <circle cx="78" cy="-3" r="4" fill="rgba(0,121,140,0.88)" />
+        <text x="88" y="1" font-size="11" fill="#5c677d">${escapeXml(t.value.authorsLabel)}</text>
+      </g>
+      <text x="${x + width - 16}" y="${headerRowY}" text-anchor="end" font-size="11" fill="#5c677d">${escapeXml(t.value.timelineTip)}</text>
       <rect x="${plotX}" y="${plotY}" width="${plotWidth}" height="${panelHeight}" rx="18" fill="rgba(255,255,255,0.34)" />
-      ${barsSvg}
+      ${gridSvg}
+      <path d="${paperArea}" fill="rgba(237,174,73,0.20)" />
+      <path d="${authorArea}" fill="rgba(0,121,140,0.14)" />
       ${selectionSvg}
+      <path d="${paperLine}" fill="none" stroke="rgba(237,174,73,0.92)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" />
+      <path d="${authorLine}" fill="none" stroke="rgba(0,121,140,0.88)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" />
       <line x1="${plotX}" y1="${(plotY + plotHeight - 6).toFixed(2)}" x2="${(plotX + plotWidth).toFixed(2)}" y2="${(plotY + plotHeight - 6).toFixed(2)}" stroke="rgba(20,33,61,0.35)" stroke-width="2" />
       ${tickSvg}
     </g>
@@ -719,22 +776,66 @@ function buildRightPanelSvg(viewportWidth) {
 
   const width = Math.min(360, viewportWidth - 32);
   const x = viewportWidth - width - 16;
-  const lines = visibleRecords.value.slice(0, 8).flatMap((record) => {
+  const lines = visibleRecords.value.slice(0, 5).flatMap((record, index) => {
     const titleLines = svgTextLines(displayTitle(record), 34, 2);
     return [
+      index ? "" : null,
       `${record.publication_year} · ${orderLabel(record.author_order_group)}`,
       ...titleLines,
       `${record.author_name} · ${record.organization_name}`,
-    ];
+    ].filter(Boolean);
   });
 
-  const panel = buildPanelSvg(x, 16, width, t.value.recordDockTitle, lines.slice(0, 24), [
+  const panel = buildPanelSvg(x, 16, width, t.value.recordDockTitle, lines.slice(0, 18), [
     t.value.recordCount(visibleRecords.value.length, filteredRecords.value.length),
   ]);
   return panel.svg;
 }
 
-function exportCurrentViewSvg() {
+function tileImageToDataUrl(tile) {
+  return new Promise((resolve) => {
+    if (!tile.complete || !tile.naturalWidth || !tile.naturalHeight) {
+      resolve(null);
+      return;
+    }
+
+    try {
+      const canvas = document.createElement("canvas");
+      canvas.width = tile.naturalWidth;
+      canvas.height = tile.naturalHeight;
+      const context = canvas.getContext("2d");
+      if (!context) {
+        resolve(null);
+        return;
+      }
+      context.drawImage(tile, 0, 0);
+      resolve(canvas.toDataURL("image/png"));
+    } catch {
+      resolve(null);
+    }
+  });
+}
+
+async function buildVisibleTileSvg(mapEl) {
+  const mapRect = mapEl.getBoundingClientRect();
+  const tileSvgParts = await Promise.all(Array.from(mapEl.querySelectorAll(".leaflet-tile")).map(async (tile) => {
+      const rect = tile.getBoundingClientRect();
+      const x = rect.left - mapRect.left;
+      const y = rect.top - mapRect.top;
+      if (rect.width <= 0 || rect.height <= 0) {
+        return "";
+      }
+      const embeddedSrc = await tileImageToDataUrl(tile);
+      const href = embeddedSrc || tile.getAttribute("src");
+      if (!href) {
+        return "";
+      }
+      return `<image href="${escapeXml(href)}" x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${rect.width.toFixed(2)}" height="${rect.height.toFixed(2)}" preserveAspectRatio="none" />`;
+    }));
+  return tileSvgParts.join("");
+}
+
+async function exportCurrentViewSvg() {
   if (!mapRef.value || isExporting.value) {
     return;
   }
@@ -746,12 +847,27 @@ function exportCurrentViewSvg() {
     const width = mapEl.clientWidth;
     const height = mapEl.clientHeight;
     const bounds = mapRef.value.getBounds();
+    const tileSvg = await buildVisibleTileSvg(mapEl);
 
     const adminPathSvg = showAdminBoundaries.value && adminLayer
       ? adminLayer.toGeoJSON().features
           .map((feature) => geometryToSvgPath(feature.geometry, { width, height }))
           .filter(Boolean)
           .map((path) => `<path d="${path}" fill="rgba(51,92,103,0.03)" stroke="rgba(51,92,103,0.35)" stroke-width="1" />`)
+          .join("")
+      : "";
+
+    const placeSvg = showPopulatedPlaces.value && placeLayer
+      ? placeLayer.toGeoJSON().features
+          .map((feature) => {
+            const [longitude, latitude] = feature.geometry?.coordinates || [];
+            if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || !bounds.contains([latitude, longitude])) {
+              return "";
+            }
+            const point = mapRef.value.latLngToContainerPoint([latitude, longitude]);
+            const isCapital = feature.properties?.FEATURECLA === "Admin-0 capital";
+            return `<circle cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="${isCapital ? 3.5 : 2.2}" fill="#e2e8f0" fill-opacity="0.45" stroke="#94a3b8" stroke-width="0.8" stroke-opacity="0.9" />`;
+          })
           .join("")
       : "";
 
@@ -762,7 +878,7 @@ function exportCurrentViewSvg() {
           return "";
         }
         const point = mapRef.value.latLngToContainerPoint([offset.lat, offset.lon]);
-        return `<circle cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="4.2" fill="${ORDER_COLORS[record.author_order_group]}" fill-opacity="0.72" stroke="${ORDER_COLORS[record.author_order_group]}" stroke-width="1" />`;
+        return `<circle cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="4.2" fill="${ORDER_COLORS[record.author_order_group]}" fill-opacity="0.72" stroke="${ORDER_COLORS[record.author_order_group]}" stroke-width="1" stroke-opacity="0.92" />`;
       })
       .join("");
 
@@ -785,8 +901,17 @@ function exportCurrentViewSvg() {
 
     const svg = `
       <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-        <rect width="${width}" height="${height}" fill="#f8f4ec" />
+        <defs>
+          <linearGradient id="mapWash" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#fff8ee" />
+            <stop offset="100%" stop-color="#f4efe5" />
+          </linearGradient>
+        </defs>
+        <rect width="${width}" height="${height}" fill="url(#mapWash)" />
+        <rect width="${width}" height="${height}" fill="rgba(255,255,255,0.26)" />
+        ${tileSvg}
         ${adminPathSvg}
+        ${placeSvg}
         ${pointSvg}
         ${labelSvg}
         ${buildLeftPanelSvg()}
@@ -1135,6 +1260,7 @@ onMounted(async () => {
 
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 12,
+    crossOrigin: "anonymous",
     attribution: "&copy; OpenStreetMap contributors",
   }).addTo(map);
 
