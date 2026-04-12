@@ -1,0 +1,10 @@
+{
+  "record_count": 79566,
+  "year_min": 1982,
+  "year_max": 2025,
+  "missing_org_count": 0,
+  "missing_org_examples": [],
+  "organization_count_with_coordinates": 4614,
+  "admin_feature_count": 2869,
+  "populated_place_feature_count": 131
+}
